@@ -4,7 +4,13 @@ const { loadAddresses } = require("./save-addresses");
 async function main() {
   // 获取网络名称
   const network = await ethers.provider.getNetwork();
-  const networkName = network.name === "unknown" ? "localhost" : network.name;
+  let networkName = network.name === "unknown" ? "localhost" : network.name;
+  
+  // 如果网络是 "hardhat" 但 Chain ID 是 31337，使用 "localhost" 地址文件
+  // 因为 hardhat 和 localhost 实际上是同一个网络（Chain ID 31337）
+  if (networkName === "hardhat" && network.chainId === 31337n) {
+    networkName = "localhost";
+  }
   
   // 获取所有账户
   const accounts = await ethers.getSigners();
@@ -28,6 +34,29 @@ async function main() {
   console.log(`  SPT: ${addresses.SPT}`);
   if (addresses.lastUpdated) {
     console.log(`  最后更新: ${addresses.lastUpdated}`);
+  }
+
+  // 检查合约代码是否存在
+  const ggUSDTCode = await ethers.provider.getCode(addresses.ggUSDT);
+  const SPTCode = await ethers.provider.getCode(addresses.SPT);
+  
+  if (ggUSDTCode === "0x" || SPTCode === "0x") {
+    console.error(`\n❌ 错误: 合约地址没有合约代码！`);
+    console.error(`  当前网络: ${network.name} (Chain ID: ${network.chainId})`);
+    console.error(`  ggUSDT 地址: ${addresses.ggUSDT} ${ggUSDTCode === "0x" ? "❌" : "✅"}`);
+    console.error(`  SPT 地址: ${addresses.SPT} ${SPTCode === "0x" ? "❌" : "✅"}`);
+    console.error("\n可能的原因:");
+    console.error("  1. 你直接运行了 'node scripts/check-balances.js'，这使用了 Hardhat 内置网络");
+    console.error("  2. 合约部署在 localhost 网络，需要使用 --network localhost 参数");
+    console.error("  3. Hardhat 本地节点未启动或已重启，合约状态丢失");
+    console.error("\n解决方案:");
+    console.error("  ✅ 使用 Hardhat 运行脚本（推荐）:");
+    console.error("     npx hardhat run scripts/check-balances.js --network localhost");
+    console.error("\n  ✅ 或者先启动本地节点:");
+    console.error("     终端1: npx hardhat node");
+    console.error("     终端2: npx hardhat run scripts/deploy.js --network localhost");
+    console.error("     终端2: npx hardhat run scripts/check-balances.js --network localhost");
+    process.exit(1);
   }
 
   // 获取合约实例

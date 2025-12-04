@@ -4,7 +4,13 @@ const { loadAddresses } = require("./save-addresses");
 async function main() {
   // 获取网络名称
   const network = await ethers.provider.getNetwork();
-  const networkName = network.name === "unknown" ? "localhost" : network.name;
+  let networkName = network.name === "unknown" ? "localhost" : network.name;
+  
+  // 如果网络是 "hardhat" 但 Chain ID 是 31337，使用 "localhost" 地址文件
+  // 因为 hardhat 和 localhost 实际上是同一个网络（Chain ID 31337）
+  if (networkName === "hardhat" && network.chainId === 31337n) {
+    networkName = "localhost";
+  }
   
   // 从文件加载合约地址
   const addresses = loadAddresses(networkName);
@@ -17,6 +23,25 @@ async function main() {
   const ggUSDTAddress = addresses.ggUSDT;
   console.log(`\n=== 检查 ggUSDT 合约信息 ===`);
   console.log(`合约地址: ${ggUSDTAddress}`);
+  console.log(`当前网络: ${network.name} (Chain ID: ${network.chainId})`);
+  
+  // 检查合约代码是否存在
+  const code = await ethers.provider.getCode(ggUSDTAddress);
+  if (code === "0x") {
+    console.error(`\n❌ 错误: 合约地址 ${ggUSDTAddress} 没有合约代码！`);
+    console.error("\n可能的原因:");
+    console.error("  1. 你直接运行了 'node scripts/check-token-info.js'，这使用了 Hardhat 内置网络");
+    console.error("  2. 合约部署在 localhost 网络，需要使用 --network localhost 参数");
+    console.error("  3. Hardhat 本地节点未启动或已重启，合约状态丢失");
+    console.error("\n解决方案:");
+    console.error("  ✅ 使用 Hardhat 运行脚本（推荐）:");
+    console.error("     npx hardhat run scripts/check-token-info.js --network localhost");
+    console.error("\n  ✅ 或者先启动本地节点:");
+    console.error("     终端1: npx hardhat node");
+    console.error("     终端2: npx hardhat run scripts/deploy.js --network localhost");
+    console.error("     终端2: npx hardhat run scripts/check-token-info.js --network localhost");
+    process.exit(1);
+  }
   
   // 获取合约实例
   const ggUSDT = await ethers.getContractAt("ggUSDT", ggUSDTAddress);
