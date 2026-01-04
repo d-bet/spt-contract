@@ -10,12 +10,12 @@ async function main() {
   const networkName = network.name === "unknown" ? "localhost" : network.name;
   console.log(`Network: ${networkName} (Chain ID: ${network.chainId})`);
 
-  // 部署 ggUSDT 测试代币
-  const ggUSDT = await ethers.getContractFactory("ggUSDT");
-  const ggusdt = await ggUSDT.deploy();
-  await ggusdt.waitForDeployment();
-  const ggusdtAddress = await ggusdt.getAddress();
-  console.log("ggUSDT deployed to:", ggusdtAddress);
+  // 部署 USDT 测试代币
+  const USDT = await ethers.getContractFactory("USDT");
+  const usdt = await USDT.deploy();
+  await usdt.waitForDeployment();
+  const usdtAddress = await usdt.getAddress();
+  console.log("USDT deployed to:", usdtAddress);
 
   // 部署 SPT
   const SPT = await ethers.getContractFactory("SPT");
@@ -34,7 +34,7 @@ async function main() {
   // 部署 BettingCore
   const BettingCore = await ethers.getContractFactory("BettingCore");
   const bettingCore = await BettingCore.deploy(
-    ggusdtAddress,
+    usdtAddress,
     treasuryAddress,
     deployer.address // signer
   );
@@ -44,7 +44,7 @@ async function main() {
 
   // 保存合约地址
   const addresses = {
-    ggUSDT: ggusdtAddress,
+    USDT: usdtAddress,
     SPT: sptAddress,
     Treasury: treasuryAddress,
     BettingCore: bettingCoreAddress,
@@ -54,11 +54,11 @@ async function main() {
 
   // 显示代币分配情况
   console.log("\n=== 代币分配情况 ===");
-  const deployerBalanceggUSDT = await ggusdt.balanceOf(deployer.address);
+  const deployerBalanceUSDT = await usdt.balanceOf(deployer.address);
   const deployerBalanceSPT = await spt.balanceOf(deployer.address);
   
   console.log(`部署者地址: ${deployer.address}`);
-  console.log(`ggUSDT余额: ${ethers.formatUnits(deployerBalanceggUSDT, 6)} ggUSDT`);
+  console.log(`USDT余额: ${ethers.formatUnits(deployerBalanceUSDT, 18)} USDT`);
   console.log(`SPT余额: ${ethers.formatEther(deployerBalanceSPT)} SPT`);
   
   console.log("\n提示：所有代币都在部署者钱包中，可以转账给其他账户进行测试");

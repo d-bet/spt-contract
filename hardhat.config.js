@@ -31,6 +31,11 @@ const config = {
     localhost: {
       url: "http://127.0.0.1:8545",
       chainId: 31337 
+    },
+    // 添加局域网网络配置
+    localNetwork: {
+      url: "http://0.0.0.0:8545",  // 或者使用你的本机IP地址，如 "http://192.168.1.100:8545"
+      chainId: 31337
     }
   },
   etherscan: {

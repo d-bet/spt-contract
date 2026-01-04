@@ -57,12 +57,12 @@ async function main() {
     console.log(`\n📋 代币信息:`);
     console.log(`  名称: ${name}`);
     console.log(`  符号: ${symbol}`);
-    console.log(`  小数位: ${decimals} ⬅️ 这应该是 6`);
+    console.log(`  小数位: ${decimals} ⬅️ 这应该是 18`);
     console.log(`  总供应量: ${ethers.formatUnits(totalSupply, decimals)} ${symbol}`);
     console.log(`  部署者余额: ${ethers.formatUnits(deployerBalance, decimals)} ${symbol}`);
     
-    if (decimals === 6) {
-      console.log(`\n✅ 合约 decimals() 返回正确值: 6`);
+    if (decimals === 18) {
+      console.log(`\n✅ 合约 decimals() 返回正确值: 18`);
       console.log(`\n⚠️  如果钱包仍显示 18 位精度，这是钱包缓存问题，请尝试：`);
       console.log(`\n📱 MetaMask 解决方案：`);
       console.log(`   1. 删除钱包中的旧 ggUSDT 代币（点击代币，选择"隐藏"或"删除"）`);
@@ -71,12 +71,12 @@ async function main() {
       console.log(`      - 或使用 Ctrl+Shift+Delete`);
       console.log(`   3. 刷新页面或重启 MetaMask 扩展`);
       console.log(`   4. 重新添加代币（使用合约地址: ${ggUSDTAddress}）`);
-      console.log(`   5. 钱包会自动从合约读取 decimals() = 6，应该显示正确余额`);
+      console.log(`   5. 钱包会自动从合约读取 decimals() = 18，应该显示正确余额`);
       console.log(`\n💡 如果还是不行，可以尝试：`);
       console.log(`   - 使用新的浏览器/隐私模式`);
       console.log(`   - 或者等待几分钟让缓存过期`);
     } else {
-      console.log(`\n❌ 合约 decimals() 返回错误值: ${decimals}，应该是 6`);
+      console.log(`\n❌ 合约 decimals() 返回错误值: ${decimals}，应该是 18`);
       console.log(`   请检查合约代码是否正确编译和部署`);
     }
   } catch (error) {
