@@ -7,7 +7,7 @@
     "test": "hardhat test",
     "node": "hardhat node --hostname 0.0.0.0",
     "node:local": "hardhat node --hostname 127.0.0.1",
-    "deploy:local": "hardhat run scripts/deploy.js --network localhost",
+    "deploy:local":"hardhat run scripts/deploy.js --network localhost",
     "deploy:bsc-testnet": "hardhat run scripts/deploy.js --network bscTestnet",
     "deploy:bsc-mainnet": "hardhat run scripts/deploy.js --network bscMainnet",
     "verify": "hardhat verify --network"
@@ -16,7 +16,7 @@
     "@nomicfoundation/hardhat-toolbox": "^4.0.0",
     "@nomicfoundation/hardhat-verify": "^2.0.0",
     "dotenv": "^16.3.1",
-    "hardhat": "^3.1.2"
+    "hardhat": "^2.19.0"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^5.0.0"

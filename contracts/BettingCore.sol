@@ -25,22 +25,22 @@ contract BettingCore is Ownable, ReentrancyGuard {
 
     // --- Enums ---
     enum MatchStatus { Created, Open, Closed, Settled, Cancelled }
-    enum Option { Home, Draw, Away }
-    enum Outcome { None, Home, Draw, Away }
+    enum Option { W, D, L }
+    enum Outcome { None, W, D, L }
     /* None (值为 0): 未结算/无结果
-    Home (值为 1): 主队获胜
-    Draw (值为 2): 平局
-    Away (值为 3): 客队获胜 */
+    W (值为 1): 主队胜
+    D (值为 2): 平局
+    L (值为 3): 主队输 */
 
     // --- Structs ---
     struct MatchInfo {
         uint256 startTime;
         MatchStatus status;
         Outcome result;
-        uint256 totalHome;
-        uint256 totalDraw;
-        uint256 totalAway;
-        uint256 totalStaked; // totalHome + totalDraw + totalAway
+        uint256 totalW;
+        uint256 totalD;
+        uint256 totalL;
+        uint256 total; // totalW + totalD + totalL
         uint16 feeBps;       // fee in basis points (e.g., 300 = 3.00%)
         address settledBy;   // who called settle (for audit)
     }
@@ -96,10 +96,10 @@ contract BettingCore is Ownable, ReentrancyGuard {
             startTime: startTime,
             status: MatchStatus.Created,
             result: Outcome.None,
-            totalHome: 0,
-            totalDraw: 0,
-            totalAway: 0,
-            totalStaked: 0,
+            totalW: 0,
+            totalD: 0,
+            totalL: 0,
+            total: 0,
             feeBps: feeBps,
             settledBy: address(0)
         });
@@ -139,17 +139,17 @@ contract BettingCore is Ownable, ReentrancyGuard {
 
         // update user bet & totals (packed into UserBet struct)
         UserBet storage b = userBets[matchId][msg.sender];
-        if (option == Option.Home) {
+        if (option == Option.W) {
             b.home += amount;
-            m.totalHome += amount;
-        } else if (option == Option.Draw) {
+            m.totalW += amount;
+        } else if (option == Option.D) {
             b.draw += amount;
-            m.totalDraw += amount;
+            m.totalD += amount;
         } else { // Away
-            b.away += amount;
-            m.totalAway += amount;
+            b.away += amount;   
+            m.totalL += amount;
         }
-        m.totalStaked += amount;
+        m.total += amount;
 
         emit BetPlaced(matchId, msg.sender, option, amount);
     }
@@ -166,7 +166,7 @@ contract BettingCore is Ownable, ReentrancyGuard {
         MatchInfo storage m = matches[matchId];
         require(m.startTime != 0, "no match");
         require(m.status == MatchStatus.Closed || m.status == MatchStatus.Open || m.status == MatchStatus.Created, "already settled/cancelled");
-        require(result == Outcome.Home || result == Outcome.Draw || result == Outcome.Away, "invalid result");
+        require(result == Outcome.W || result == Outcome.D || result == Outcome.L, "invalid result");
         // one-time settle guard
         require(!matchSettledNonce[matchId], "already settled");
 
@@ -183,7 +183,7 @@ contract BettingCore is Ownable, ReentrancyGuard {
         matchSettledNonce[matchId] = true;
 
         // compute fee and move fee to treasury (do NOT distribute here)
-        uint256 total = m.totalStaked;
+        uint256 total = m.total;
         if (total > 0) {
             uint256 fee = (total * m.feeBps) / MAX_BPS;
             if (fee > 0) {
@@ -206,22 +206,24 @@ contract BettingCore is Ownable, ReentrancyGuard {
         uint256 userBetOnWinner;
         uint256 totalWinnerStaked;
 
-        if (m.result == Outcome.Home) {
+        if (m.result == Outcome.W) {
             userBetOnWinner = b.home;
-            totalWinnerStaked = m.totalHome;
-        } else if (m.result == Outcome.Draw) {
+            totalWinnerStaked = m.totalW;
+        } else if (m.result == Outcome.D) {
             userBetOnWinner = b.draw;
-            totalWinnerStaked = m.totalDraw;
-        } else { // Away
+            totalWinnerStaked = m.totalD;
+        } else if (m.result == Outcome.L) {
             userBetOnWinner = b.away;
-            totalWinnerStaked = m.totalAway;
+            totalWinnerStaked = m.totalL;
+        } else {
+            revert("invalid result");
         }
 
         require(userBetOnWinner > 0, "no winning bet");
         require(totalWinnerStaked > 0, "no winner pool");
 
         // Prize pool after fee
-        uint256 prizePool = (m.totalStaked * (MAX_BPS - m.feeBps)) / MAX_BPS;
+        uint256 prizePool = (m.total * (MAX_BPS - m.feeBps)) / MAX_BPS;
 
         // payout = userBetOnWinner * prizePool / totalWinnerStaked
         uint256 payout = (userBetOnWinner * prizePool) / totalWinnerStaked;
@@ -263,7 +265,7 @@ contract BettingCore is Ownable, ReentrancyGuard {
 
     function getMatchTotals(uint256 matchId) external view returns (uint256 home, uint256 draw, uint256 away, uint256 total) {
         MatchInfo storage m = matches[matchId];
-        return (m.totalHome, m.totalDraw, m.totalAway, m.totalStaked);
+        return (m.totalW, m.totalD, m.totalL, m.total);
     }
 
     /// @notice Helper to compute user's potential payout (read-only). Does not consider rounding.
@@ -274,20 +276,20 @@ contract BettingCore is Ownable, ReentrancyGuard {
 
         uint256 userBetOnWinner;
         uint256 totalWinnerStaked;
-        if (m.result == Outcome.Home) {
+        if (m.result == Outcome.W) {
             userBetOnWinner = b.home;
-            totalWinnerStaked = m.totalHome;
-        } else if (m.result == Outcome.Draw) {
+            totalWinnerStaked = m.totalW;
+        } else if (m.result == Outcome.D) {
             userBetOnWinner = b.draw;
-            totalWinnerStaked = m.totalDraw;
-        } else if (m.result == Outcome.Away) {
+            totalWinnerStaked = m.totalD;
+        } else if (m.result == Outcome.L) {
             userBetOnWinner = b.away;
-            totalWinnerStaked = m.totalAway;
+            totalWinnerStaked = m.totalL;
         } else {
-            return 0;
+            revert("invalid result");
         }
         if (userBetOnWinner == 0 || totalWinnerStaked == 0) return 0;
-        uint256 prizePool = (m.totalStaked * (MAX_BPS - m.feeBps)) / MAX_BPS;
+        uint256 prizePool = (m.total * (MAX_BPS - m.feeBps)) / MAX_BPS;
         payout = (userBetOnWinner * prizePool) / totalWinnerStaked;
     }
 }
